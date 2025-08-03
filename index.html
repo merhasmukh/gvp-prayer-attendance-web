@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Prayer Attendance</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 400px;
+      margin: auto;
+      background: #f4f4f4;
+    }
+    h2 {
+      text-align: center;
+    }
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .message {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Prayer Attendance</h2>
+
+  <form id="attendance-form">
+    <input type="text" id="roll_number" placeholder="Enter Your Roll Number" required />
+    <button type="submit">Mark Attendance</button>
+  </form>
+
+  <div class="message" id="message"></div>
+
+  <script>
+    // Generate device_id only once
+    let device_id = localStorage.getItem('device_id');
+    if (!device_id) {
+      device_id = crypto.randomUUID();
+      localStorage.setItem('device_id', device_id);
+    }
+
+    const form = document.getElementById('attendance-form');
+    const messageBox = document.getElementById('message');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const roll_number = document.getElementById('roll_number').value.trim();
+
+      if (!roll_number) {
+        messageBox.textContent = "Please enter your roll number.";
+        return;
+      }
+
+      // Get geolocation
+      if (!navigator.geolocation) {
+        messageBox.textContent = "Geolocation is not supported by your browser.";
+        return;
+      }
+
+      messageBox.textContent = "Getting your location...";
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const payload = {
+          roll_number: roll_number,
+          device_id: device_id,
+          lat: position.coords.latitude,
+          long: position.coords.longitude
+        };
+
+        try {
+          const res = await fetch('http://127.0.0.1:5000/api/mark-attendance', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const text = await res.text();
+          messageBox.textContent = text;
+
+          if (res.ok) {
+            messageBox.style.color = "green";
+          } else {
+            messageBox.style.color = "red";
+          }
+
+        } catch (err) {
+          console.error(err);
+          messageBox.textContent = "Failed to connect to server.";
+          messageBox.style.color = "red";
+        }
+
+      }, () => {
+        messageBox.textContent = "Unable to retrieve your location.";
+        messageBox.style.color = "red";
+      });
+    });
+  </script>
+
+</body>
+</html>
